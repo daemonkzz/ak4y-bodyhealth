@@ -115,3 +115,9 @@ AK4Y.Translate = {
     youDontHaveRequiredItem = "You don't have required item to revive player",
 
 }
+
+AK4Y.ZombieDamage = {
+    min = 3, -- Zombi vuruşu başına minimum hasar
+    max = 8, -- Zombi vuruşu başına maksimum hasar
+    BleedChance = 15 -- Zombi vuruşunun kanamaya neden olma şansı (% olarak, 1-100 arası)
+}

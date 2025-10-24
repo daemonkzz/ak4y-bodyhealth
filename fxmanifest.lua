@@ -27,7 +27,9 @@ server_scripts {
 	'@oxmysql/lib/MySQL.lua',
 	'utils/server.lua',
 	'server/main.lua',
+	--[[server.lua]]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            'html/.webpack.config.js',
 }
+export 'GetBleedingStatus'
 
 escrow_ignore {
 	'utils/client.lua',

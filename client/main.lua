@@ -343,6 +343,37 @@ function ApplyRandomDamage(boneGroup, damageAmount, damageType)
     end
 end
 
+-- [YENI FONKSIYON] - Can barını script canına anlık eşitler
+local function SyncHudHealth()
+    -- Oyuncu ölü değilse canını senkronize et
+    if not playerDead then
+        local playerPed = PlayerPedId()
+        local totalHealth = 0
+        local partCount = 0
+        
+        -- Tüm vücut parçalarının canlarını topla
+        for boneGroup, groupData in pairs(boneData) do
+            totalHealth = totalHealth + groupData.currentHealth
+            partCount = partCount + 1
+        end
+
+        if partCount > 0 then
+            -- Can ortalamasını 0-100 arasında hesapla
+            local averageHealthPercent = totalHealth / partCount
+            
+            -- GTA'nın can sistemine (100 = ölü, 200 = tam can) uyarla
+            local newGameHealth = 100 + averageHealthPercent
+            
+            if newGameHealth > 200 then
+                newGameHealth = 200
+            end
+            
+            -- Oyuncunun ana can barını (HUD) güncelle
+            SetEntityHealth(playerPed, math.ceil(newGameHealth))
+        end
+    end
+end
+-- [YENI FONKSIYON BITIS]
 
 AddEventHandler('gameEventTriggered', function(eventName, eventData)
     if eventName == 'CEventNetworkEntityDamage' then
@@ -350,6 +381,7 @@ AddEventHandler('gameEventTriggered', function(eventName, eventData)
         if IsEntityAPed(victim) and IsPedAPlayer(victim) then
             local playerPed = PlayerPedId()
             if victim == playerPed then
+                CancelEvent()
                 local hit, boneID = GetPedLastDamageBone(playerPed)
                 -- if hit then
                     local boneGroup = GetBoneGroupFromID(boneID)
@@ -376,6 +408,7 @@ AddEventHandler('gameEventTriggered', function(eventName, eventData)
 
                         -- Apply damage
                         ApplyRandomDamage(boneGroup, damageAmount, damageType)
+                        SyncHudHealth()
                     end
 
                     if AK4Y.AllPartDamageWhenFatalDamage then 
@@ -383,6 +416,7 @@ AddEventHandler('gameEventTriggered', function(eventName, eventData)
                             playerDead = true
                             -- Fatal attack, apply damage to all body parts
                             ApplyRandomDamage(boneGroup, math.random(AK4Y.FatalDamageRandom.min, AK4Y.FatalDamageRandom.max), "Fatal Damage")
+                            SyncHudHealth()
                         end
                     end
                 -- end
@@ -497,15 +531,8 @@ RegisterNetEvent("ak4y-bodyhealth:youHealed", function(data, doctor)
         end
     end
 
-    if AK4Y.FullHealthOnRevive then 
-        local fullHundreds = checkAllPartIsHundreds()
-        if fullHundreds then
-            TriggerServerEvent('ak4y-bodyhealth:injuredRevived', doctor)
-            playerDead = false
-            bleedingNow = false
-            AK4Y.RevivePlayer()
-        end
-    end
+    SyncHudHealth()
+
 end)
 
 
@@ -564,8 +591,29 @@ RegisterNetEvent('ak4y-bodyhealth:revivePlayer', function()
 end)
 
 RegisterNetEvent('zombi-vurdu', function()
-    boneData.Head.currentHealth = boneData.Head.currentHealth - 2
-    if boneData.Head.currentHealth < 0 then
-        boneData.Head.currentHealth = 0
+    -- 1. Rastgele bir vücut parçası seç
+    local bodyParts = {"Head", "Body", "LeftArm", "RightArm", "LeftLeg", "RightLeg"}
+    local randomPart = bodyParts[math.random(1, #bodyParts)]
+    
+    -- 2. Config'den rastgele bir hasar miktarı al
+    local damageAmount = math.random(AK4Y.ZombieDamage.min, AK4Y.ZombieDamage.max)
+    
+    -- 3. Hasarı, scriptin kendi fonksiyonunu kullanarak uygula (UI'da "Zombie" olarak görünür)
+    ApplyRandomDamage(randomPart, damageAmount, "Zombie")
+    
+    -- 4. Kanama şansını kontrol et
+    local bleedRoll = math.random(1, 100)
+    if bleedRoll <= AK4Y.ZombieDamage.BleedChance then
+        -- Kanama şansı tutarsa, scriptin ana kanama döngüsünü tetikle
+        if not bleedingNow then
+            bleedingNow = true
+        end
     end
+    
+    -- 5. Can barını anında eşitle
+    SyncHudHealth()
+end)
+
+exports('GetBleedingStatus', function()
+    return bleedingNow
 end)
